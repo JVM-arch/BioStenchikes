@@ -12,7 +12,7 @@ function getBasePath() {
   if (process.env.GITHUB_REPOSITORY) {
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     // Если репозиторий называется username.github.io, base = '/'
-    if (repo === `${owner}.github.io`) {
+    if (repo === `${owner}.github.io` || repo.endsWith('.github.io')) {
       return '/';
     }
     // Иначе base = '/repo-name/'
@@ -20,14 +20,9 @@ function getBasePath() {
   }
   
   // Для локальной разработки
+  // Для репозитория jvm-arch.github.io base path = '/'
   if (process.env.NODE_ENV === 'production') {
-    // Если вы знаете название репозитория, укажите его здесь:
-    // Например, если репозиторий называется 'BIO', то:
-    // return '/BIO/';
-    // Если репозиторий называется 'my-bio', то:
-    // return '/my-bio/';
-    // Если репозиторий называется 'username.github.io', оставьте:
-    return '/'; // по умолчанию для username.github.io
+    return '/'; // для jvm-arch.github.io
   }
   
   // Dev режим
