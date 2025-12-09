@@ -3,7 +3,9 @@
   import Sidebar from './components/Sidebar.svelte';
   import Header from './components/Header.svelte';
   import Toast from './components/Toast.svelte';
+  import Login from './pages/Login.svelte';
   import { profileStore, loadProfile, saveProfile } from './stores/profile.js';
+  import { checkSession, clearSession } from './utils/auth.js';
   import Appearance from './pages/Appearance.svelte';
   import Media from './pages/Media.svelte';
   import Box from './pages/Box.svelte';
@@ -18,21 +20,42 @@
   let currentTab = 'appearance';
   let profile = {};
   let sidebarOpen = false;
+  let authenticated = false;
   
   profileStore.subscribe(value => {
     profile = value;
   });
   
   onMount(() => {
+    // Проверяем аутентификацию
+    authenticated = checkSession();
+    
+    if (authenticated) {
+      loadProfile();
+      
+      // Auto-save on changes
+      const unsubscribe = profileStore.subscribe(value => {
+        saveProfile(value);
+      });
+      
+      return unsubscribe;
+    }
+  });
+  
+  function handleAuthenticated() {
+    authenticated = true;
     loadProfile();
     
     // Auto-save on changes
-    const unsubscribe = profileStore.subscribe(value => {
+    profileStore.subscribe(value => {
       saveProfile(value);
     });
-    
-    return unsubscribe;
-  });
+  }
+  
+  function handleLogout() {
+    clearSession();
+    authenticated = false;
+  }
   
   function handleTabChange(e) {
     currentTab = e.detail;
@@ -63,12 +86,15 @@
   }
 </script>
 
+{#if !authenticated}
+  <Login on:authenticated={handleAuthenticated} />
+{:else}
 <div class="admin-panel">
   <Sidebar
     currentTab={currentTab}
     {profile}
     on:tabChange={handleTabChange}
-    on:logout={() => console.log('Logout')}
+    on:logout={handleLogout}
   />
   
   <div class="admin-content">
@@ -76,7 +102,7 @@
       breadcrumbs={getBreadcrumbs()}
       title={getTitle()}
       {profile}
-      on:logout={() => console.log('Logout')}
+      on:logout={handleLogout}
     />
     
     <main class="content-main">
@@ -106,6 +132,7 @@
   
   <Toast />
 </div>
+{/if}
 
 <style>
   :global(body) {

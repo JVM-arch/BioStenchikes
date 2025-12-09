@@ -24,16 +24,14 @@
   const dispatch = createEventDispatcher();
   let open = false;
   let authenticated = false;
+  let usernameInput = '';
   let passwordInput = '';
-  let storedPass = 'admin123';
-  let newPass = '';
   let loginError = '';
   let newSocial = { label: '', url: '' };
   let newCategory = { icon: '⭐', name: 'New', color: 'blue' };
   let newSkill = { name: 'Skill', level: 3 };
 
   const AUTH_KEY = 'bio-admin-auth';
-  const PASS_KEY = 'bio-admin-pass';
 
   function toggle() {
     open = !open;
@@ -110,26 +108,38 @@
     dispatch('update', { skills: updated });
   }
 
-  function login() {
-    if (passwordInput === storedPass) {
+  async function login() {
+    if (!authModule) {
+      loginError = 'Система аутентификации недоступна';
+      return;
+    }
+    
+    if (!usernameInput.trim() || !passwordInput.trim()) {
+      loginError = 'Заполните все поля';
+      return;
+    }
+    
+    if (authModule.validateCredentials(usernameInput, passwordInput)) {
       authenticated = true;
       loginError = '';
+      authModule.saveSession();
       localStorage.setItem(AUTH_KEY, '1');
+      usernameInput = '';
+      passwordInput = '';
     } else {
-      loginError = 'Неверный пароль';
+      loginError = 'Неверный логин или пароль';
+      passwordInput = '';
     }
   }
 
   function logout() {
     authenticated = false;
     localStorage.removeItem(AUTH_KEY);
-  }
-
-  function savePassword() {
-    if (!newPass) return;
-    storedPass = newPass;
-    localStorage.setItem(PASS_KEY, storedPass);
-    newPass = '';
+    if (authModule) {
+      authModule.clearSession();
+    }
+    usernameInput = '';
+    passwordInput = '';
   }
 
   function onKeydown(e) {
@@ -139,11 +149,17 @@
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     try {
-      const savedPass = localStorage.getItem(PASS_KEY);
-      if (savedPass) storedPass = savedPass;
-      authenticated = localStorage.getItem(AUTH_KEY) === '1';
+      // Загружаем модуль аутентификации
+      authModule = await import('../admin/utils/auth.js');
+      // Проверяем сессию
+      if (authModule.checkSession()) {
+        authenticated = true;
+        localStorage.setItem(AUTH_KEY, '1');
+      } else {
+        authenticated = localStorage.getItem(AUTH_KEY) === '1';
+      }
     } catch (e) {
       console.warn('Auth load error', e);
     }
@@ -183,11 +199,19 @@
 
     {#if !authenticated}
       <div class="field">
+        <label>Логин</label>
+        <input
+          type="text"
+          placeholder="Введите логин"
+          bind:value={usernameInput}
+          autocomplete="username"
+        />
         <label>Пароль</label>
         <input
           type="password"
-          placeholder="admin123"
+          placeholder="Введите пароль"
           bind:value={passwordInput}
+          autocomplete="current-password"
           on:keydown={(e) => e.key === 'Enter' && login()}
         />
         {#if loginError}
@@ -313,16 +337,6 @@
           </select>
         </div>
 
-        <div class="field">
-          <label>Новый пароль (опционально)</label>
-          <input
-            type="password"
-            placeholder="новый пароль"
-            bind:value={newPass}
-            on:keydown={(e) => e.key === 'Enter' && savePassword()}
-          />
-          <button class="ghost-btn" on:click={savePassword}>Сохранить пароль</button>
-        </div>
       </div>
 
       <div class="field">

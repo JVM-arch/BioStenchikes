@@ -35,10 +35,28 @@ export default defineConfig({
     build: {
         outDir: 'dist',
         assetsDir: 'assets',
-        sourcemap: false,
+        sourcemap: false, // Отключаем source maps для безопасности
+        minify: 'terser', // Используем terser для лучшей обфускации
+        terserOptions: {
+            compress: {
+                drop_console: true, // Удаляем console.log
+                drop_debugger: true,
+                pure_funcs: ['console.log', 'console.info', 'console.debug']
+            },
+            mangle: {
+                toplevel: true, // Обфусцируем имена переменных
+                properties: {
+                    regex: /^_/ // Обфусцируем приватные свойства
+                }
+            }
+        },
         rollupOptions: {
             output: {
-                manualChunks: undefined
+                manualChunks: undefined,
+                // Обфускация имен файлов
+                chunkFileNames: 'assets/[hash].js',
+                entryFileNames: 'assets/[hash].js',
+                assetFileNames: 'assets/[hash].[ext]'
             }
         }
     }

@@ -17,6 +17,12 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+
+# Security - никогда не коммитьте файлы с паролями!
+*.env
+*.key
+*.secret
 
 # Logs
 npm-debug.log*
